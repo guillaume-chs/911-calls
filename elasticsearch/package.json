@@ -1,4 +1,5 @@
 {
+  "author": "Guillaume Chanson <guillaume.chns@gmail.com>",
   "name": "911-calls-mongodb",
   "version": "1.0.0",
   "dependencies": {
