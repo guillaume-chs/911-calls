@@ -11,7 +11,7 @@ npm install
 node import.js
 ```
 
-Vérifiez que les données ont été importées correctement grâce au shell (le nombre total de documents doit être `153194`) :
+Vérifiez que les données ont été importées correctement grâce au shell (le nombre total de documents doit être `761806`) :
 
 ```
 GET <nom de votre index>/_count
