@@ -8,9 +8,11 @@ const INDEX_TYPE = require('./constants').INDEX_TYPE; // index type constant
 
 
 
-const my_elastic = require('./elastic-api'); // Module to handle elastic workflow
+const my_elastic = require('./elastic-api')(INDEX_NAME, INDEX_TYPE); // Module to handle elastic workflow
 
-my_elastic.createFreshIndex(INDEX_NAME, INDEX_TYPE, {coordinates: { type: "geo_point" }});
+my_elastic.createFreshIndex({
+  coordinates: { type: "geo_point" }
+});
 
 
 
@@ -23,19 +25,7 @@ fs.createReadStream('../French_Presidential_Election_2017_First_Round.small.csv'
   .on('data', data => (i++ < 10) ? votes.push(parseVotes(data)) : undefined ) // parser used here
   .on('end', () => {
     console.log(votes[0]);
-    // client.bulk(createBulkInsertQuery(votes), (err, res) => {
-    //   if (err) console.trace(err.message);
-    //   else console.log(`Inserted ${res.items.length} voting results`);
-    //   client.close();
-    // });
+    my_elastic.insert(votes)
+      .then(res => console.log(`Inserted ${res.items.length} voting results`))
+      .catch(err => console.trace(err));
   });
-
-const createBulkInsertQuery = votes => {
-  const body = votes.reduce((acc, vote) => {
-          acc.push({ index: { _index: INDEX_NAME, _type: INDEX_TYPE} });
-          acc.push(vote); // vote is formatted, considering parsing phase
-          return acc;
-        }, []);
-
-  return { body };
-};

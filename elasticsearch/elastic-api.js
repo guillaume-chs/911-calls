@@ -1,6 +1,7 @@
 const elasticsearch = require('elasticsearch');
 
-
+let indexName;
+let indexType;
 let client = undefined;
 
 const getClient = () => 
@@ -8,6 +9,11 @@ const getClient = () =>
     host: 'localhost:9200',
     log: 'info' // 'error'
   });
+
+const closeClient = () => {
+  client.close();
+  client = undefined;
+}
 
 
 
@@ -52,23 +58,47 @@ const createIndex = (indexName, typeName, mappings) => new Promise((resolve, rej
 
 
 
-const createFreshIndex = (indexName, typeName, mappings) => {
+const createFreshIndex = (mappings) => {
   if (!client) client = getClient();
 
   deleteIndexIfExists(indexName)
     .then(() => { // resolve
-      createIndex(indexName, typeName, mappings)
-        .then(() => client.close())
-        .catch(() => client.close())
+      createIndex(indexName, indexType, mappings)
+        .then(() => closeClient())
+        .catch(() => closeClient())
     })
     .catch((err) => { // reject
       console.trace(err);
-      client.close();
+      closeClient();
     })
 };
 
 
 
-module.exports = {
-  createFreshIndex
+const createBulkInsertQuery = votes => ({
+  body: votes.reduce((acc, vote) => {
+          acc.push({ index: { _index: indexName, _type: indexType } });
+          acc.push(vote); // vote is formatted, considering parsing phase
+          return acc;
+        }, [])
+});
+
+const insert = (votes) => new Promise((resolve, reject) => {
+  if (!client) client = getClient();
+  client.bulk(createBulkInsertQuery(votes), (err, res) => {
+    client.close();
+    if (err) reject(err);
+    else     resolve(res);
+  });
+});
+
+
+
+module.exports = (_indexName, _indexType) => {
+  indexName = _indexName;
+  indexType = _indexType;
+  return ({
+    createFreshIndex,
+    insert
+  });
 };
