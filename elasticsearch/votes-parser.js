@@ -8,26 +8,63 @@ const parseTitle = (rawTitle) => {
     });
 }
 
-// let {[0]: lat, [1]:long} = str.split(',');
+const parseGeo = (str) => {
+    let {[0]: lat, [1]:long} = str.split(',')
+    return { lat: lat.trim(), long: long.trim() };   
+}
 
 const parseVotes = (data) => ({
-    dep_code: data['Department code'],
-    dep_name: data['Department']
+    geography: {
+        department_code: data['Department code'],
+        department_name: data['Department'],
+        constituency_code: data['Constitution code'],
+        constituency_name: data['Constitution'],
+        commune_code: data['Commune code'],
+        commune_name: data['Commune'],
+        address: data['Address'],
+        postcode: data['Postal code'],
+        city: data['City'],
+        unique: data['Poll.St-unique']
+    },
+
+    polling_station: {
+        id: data['Polling Station'],
+        name: data['Polling station name'],
+        insee: data['INSEE code'],
+        coordinates: parseGeo(data['Coordinates']),
+    },
+
+    polling_data: {
+        registered: data['Registered'],
+        abstentions: data['Abstentions'],
+        abstentions_ratio: data['% Abs/Reg'],
+        
+        voters: data['Voters'],
+        voters_ratio: data['% Vot/Reg'],
+        
+        others: data['None of the above(NOTA)'],
+        others_ratio_reg: data['% NOTA/Reg'],
+        others_ratio_vot: data['% NOTA/Vot'],
+        
+        nulls: data['Nulls'],
+        nulls_ratio_reg: data['% Nulls/Reg'],
+        nulls_ratio_vot: data['% Nulls/Vot'],
+        
+        expressed: data['Expressed'],
+        expressed_ratio_reg: data['% Exp/Reg'],
+        expressed_ratio_vot: data['% Exp/Vot'],
+    },
+    
+    winner: {
+        signboard: data['Signboard'],
+        sex: data['Sex'],
+        surname: data['Surname'],
+        firstname: data['First name'],
+        
+        votes: data['Voted'],
+        votes_ratio_reg: data['% Votes/Reg'],
+        votes_ratio_exp: data['% Votes/Exp'],
+    }
 });
-
-
-// const parseVotes = (data) => ({
-//     ...{ cat:category, title } = parseTitle(data.title),
-//     location: {
-//       lat: data.lat,
-//       lng: data.lng
-//     },
-//     desc: data.desc,
-//     zip: data.zip,
-//     tmstp: data.timeStamp,
-//     neigbr: data.twp,
-//     addr: data.addr,
-//     e: data.e
-// });
 
 module.exports = parseVotes;

@@ -12,7 +12,7 @@ const getClient = () =>
 
 
 const deleteIndexIfExists = (indexName) => new Promise((resolve, reject) => {
-  if (!client) client = getClient();
+  if (!client) reject(new Error('client is undefined'));
 
   client.indices.exists({ index: indexName }, (err, indexExists) => {
     if (err) reject(err);
@@ -30,14 +30,11 @@ const deleteIndexIfExists = (indexName) => new Promise((resolve, reject) => {
 
 
 
-const createIndex = (indexName, typeName, mappings) => {
-  if (!client) client = getClient();
+const createIndex = (indexName, typeName, mappings) => new Promise((resolve, reject) => {
+  if (!client) reject(new Error('client is undefined'));
 
   client.indices.create({ index: indexName }, (err, res) => {
-    if (err) {
-      console.trace(err.message);
-      return;
-    }
+    if (err) reject(err);
 
     if (!!mappings) {
       client.indices.putMapping({
@@ -48,12 +45,10 @@ const createIndex = (indexName, typeName, mappings) => {
             properties: { ...mappings }
           }
         }
-      }, (err, res) => {
-        if (err) console.trace(err.message);
-      });
+      }, (err, res) => (!!err) ? reject(err) : resolve());
     }
   });
-};
+});
 
 
 
@@ -61,8 +56,15 @@ const createFreshIndex = (indexName, typeName, mappings) => {
   if (!client) client = getClient();
 
   deleteIndexIfExists(indexName)
-    .then(() => createIndex(indexName, typeName, mappings)) // resolve
-    .catch((err) => console.trace(err)); // reject
+    .then(() => { // resolve
+      createIndex(indexName, typeName, mappings)
+        .then(() => client.close())
+        .catch(() => client.close())
+    })
+    .catch((err) => { // reject
+      console.trace(err);
+      client.close();
+    })
 };
 
 

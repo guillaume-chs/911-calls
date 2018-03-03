@@ -22,7 +22,7 @@ fs.createReadStream('../French_Presidential_Election_2017_First_Round.small.csv'
   .pipe(csv())
   .on('data', data => (i++ < 10) ? votes.push(parseVotes(data)) : undefined ) // parser used here
   .on('end', () => {
-    console.log(votes);
+    console.log(votes[0]);
     // client.bulk(createBulkInsertQuery(votes), (err, res) => {
     //   if (err) console.trace(err.message);
     //   else console.log(`Inserted ${res.items.length} voting results`);
