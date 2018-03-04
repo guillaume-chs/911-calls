@@ -37,6 +37,18 @@ const checkIndexExists = indexName => new Promise((resolve, reject) => {
 
 
 
+const deleteIndex = indexName => new Promise((resolve, reject) => {
+  console.log('Deleting index');
+  if (!client) reject(new Error('client is undefined'));
+
+  else client.indices.delete({ index: indexName }, (err, res) => {
+    if (err) reject(err);
+    else     resolve(res);
+  });
+});
+
+
+
 const flushIndex = indexName => new Promise((resolve, reject) => {
   console.log('Flushing index');
   if (!client) reject(new Error('client is undefined'));
@@ -91,14 +103,19 @@ const createFreshIndex = () => new Promise((resolve, reject) => {
   
   const closeAndResolve = res => { closeClient(); resolve(res); }; // resolve helper
   const closeAndReject  = err => { closeClient(); reject(err); };  // reject helper
-
-  const worflow = indexExists => (indexExists) ? flushIndex : createIndex; // worflow helper
   
   checkIndexExists(indexName)
-    .then(indexExists => worflow(indexExists)(indexName, indexType, mappings) // create or flush if exists
-      .then(closeAndResolve) // ok
-      .catch(closeAndReject) // fail
-    )
+    .then(indexExists => {
+      if (indexExists) {
+        deleteIndex(indexName)
+          .then(res => {
+            createIndex(indexType, indexName, mappings)
+            .then(closeAndResolve) // ok
+            .catch(closeAndReject) // fail
+          })
+          .catch(closeAndReject);
+      }
+    })
     .catch(closeAndReject) // fail
 });
 
