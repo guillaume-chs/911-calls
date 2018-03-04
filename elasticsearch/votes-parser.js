@@ -67,4 +67,9 @@ const parseVotes = (data) => ({
     }
 });
 
-module.exports = parseVotes;
+const getMappings = () => ({
+    coordinates: { type: "geo_point" }
+});
+
+module.exports.parseVotes = parseVotes;
+module.exports.mappings = getMappings();
