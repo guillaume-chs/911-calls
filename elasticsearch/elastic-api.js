@@ -146,43 +146,6 @@ const insert = votes => new Promise((resolve, reject) => {
   Promise.all( Array.of(0,1,2).map(insertAsync) )
     .then(() => { resolve(votes.length) })
     .catch(err => { reject(err); });
-
-  // const insertRecursively = i => new Promise((resolve, reject) => {
-  //   if (i >= 3) resolve(votes.length);
-
-  //   else client.bulk(createBulkInsertQuery(votes.slice(third*i, Math.max(third*(i+1), votes.length))), (err, res) => { // callback helper
-  //     if (err) reject(err.message);
-  //     else
-  //       insertRecursively(i+1)
-  //         .then(() => resolve())
-  //   });
-  // });
-
-  // insertRecursively(0)
-  //   .then(() => {
-  //     closeClient();
-  //     resolve(votes.length);
-  //   })
-  //   .catch(err => {
-  //     closeClient();
-  //     reject(err);
-  //   });
-
-  // for (let i = 0; i < 100 && ok; i++) {
-  //   createBulkInsertQuery(votes.slice(percent*i, Math.max(percent*(i+1), votes.length)))
-  //     .then(body => client.bulk(body, handleError))
-  //     .catch(handleError);
-  // }
-
-  // console.log(votes[0]);
-  // const body = createBulkInsertQuery(votes.slice(0, 3));
-  // console.log(body.body[1]);
-  // console.log(body.body[2]);
-  
-  // client.bulk(createBulkInsertQuery(votes.slice(0,50000)), (err, res) => {
-  //   if (err) reject(err.message);
-  //   else resolve(votes.length);
-  // });
 });
 
 
