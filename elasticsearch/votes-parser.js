@@ -71,7 +71,12 @@ const parseVotes = data => ({
 });
 
 const getMappings = () => ({
-    coordinates: { type: "geo_point" }
+    'geography.coordinates': {
+        type: 'geo_point'
+    },
+    'polling_data.abstentions_ratio': {
+        type: 'float'
+    }
 });
 
 module.exports.parseVotes = parseVotes;
