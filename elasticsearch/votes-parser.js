@@ -1,6 +1,6 @@
 const TITLE_DELIMITER = require('./constants').TITLE_DELIMITER;
 
-const parseTitle = (rawTitle) => {
+const parseTitle = rawTitle => {
     const parsed = rawTitle.split(TITLE_DELIMITER);
     return ({
         category: parsed[0].trim(),
@@ -8,27 +8,30 @@ const parseTitle = (rawTitle) => {
     });
 }
 
-const parseGeo = (str) => {
+const parseGeo = str => {
+    if (!str) {
+        return { lat: undefined, long: undefined};
+    }
     let {[0]: lat, [1]:long} = str.split(',')
     return { lat: lat.trim(), long: long.trim() };   
 }
 
-const parseVotes = (data) => ({
+const parseVotes = data => ({
     geography: {
         department_code: data['Department code'],
         department_name: data['Department'],
-        constituency_code: data['Constitution code'],
-        constituency_name: data['Constitution'],
+        constituency_code: data['Constituency code'],
+        constituency_name: data['Constituency'],
         commune_code: data['Commune code'],
         commune_name: data['Commune'],
         address: data['Address'],
         postcode: data['Postal code'],
         city: data['City'],
-        unique: data['Poll.St-unique']
+        unique: data['Poll.St.-unique']
     },
 
     polling_station: {
-        id: data['Polling Station'],
+        id: data['Polling station'],
         name: data['Polling station name'],
         insee: data['INSEE code'],
         coordinates: parseGeo(data['Coordinates']),

@@ -26,10 +26,9 @@ const closeClient = () => {
 
 const checkIndexExists = indexName => new Promise((resolve, reject) => {
   console.log('Checking index');
-
   if (!client) reject(new Error('client is undefined'));
 
-  else client.indices.exists({ index: indexName }, (err, res) => {
+  else client.indices.exists({ index: indexName, expandWildcards: 'all' }, (err, res) => {
       if (err) reject(err);
       else     resolve(res);
   });
@@ -88,7 +87,7 @@ const createIndex = (indexName, indexType, mappings) => new Promise((resolve, re
 const createBulkInsertQuery = votes => ({
   body: votes.reduce((acc, vote) => {
           acc.push({ index: { _index: indexName, _type: indexType } });
-          acc.push(vote); // vote is formatted, considering parsing phase
+          acc.push(vote);
           return acc;
         }, [])
 });
@@ -106,29 +105,84 @@ const createFreshIndex = () => new Promise((resolve, reject) => {
   
   checkIndexExists(indexName)
     .then(indexExists => {
+      console.log('Index exists : ' + indexExists);
       if (indexExists) {
         deleteIndex(indexName)
-          .then(res => {
-            createIndex(indexType, indexName, mappings)
-            .then(closeAndResolve) // ok
-            .catch(closeAndReject) // fail
-          })
-          .catch(closeAndReject);
+        .catch(closeAndReject)
+        .then(res => {
+          createIndex(indexName, indexType, mappings)
+          .then(closeAndResolve) // ok
+          .catch(closeAndReject) // fail
+        })
+      }
+      else {
+        createIndex(indexName, indexType, mappings)
+        .then(closeAndResolve) // ok
+        .catch(closeAndReject) // fail
       }
     })
-    .catch(closeAndReject) // fail
+    .catch(closeAndReject);
 });
 
 
 
 const insert = votes => new Promise((resolve, reject) => {
   if (!client) openClient(); // open client
+  
+  // Votes are too big, still (despite fragmented in 5)
+  // Split votes in three chunks
+  // Avoid ("Request too big")
+  const third = Math.ceil(votes.length / 3); // about 50.000 lines
+  const getVoteChunk = i => 
+    votes.slice(third*i, (i < 2) ? third*(i+1) : votes.length);
 
-  client.bulk(createBulkInsertQuery(votes), (err, res) => {
-    closeClient();
-    if (err) reject(err);
-    else     resolve(res);
+  const insertAsync = i => new Promise((resolve, reject) => {
+    client.bulk(createBulkInsertQuery(votes.slice(third*i, (i < 2) ? third*(i+1) : votes.length)), (err, res) => { // callback helper
+      if (err) reject(err.message);
+      else     resolve();
+    });
   });
+
+  Promise.all( Array.of(0,1,2).map(insertAsync) )
+    .then(() => { resolve(votes.length) })
+    .catch(err => { reject(err); });
+
+  // const insertRecursively = i => new Promise((resolve, reject) => {
+  //   if (i >= 3) resolve(votes.length);
+
+  //   else client.bulk(createBulkInsertQuery(votes.slice(third*i, Math.max(third*(i+1), votes.length))), (err, res) => { // callback helper
+  //     if (err) reject(err.message);
+  //     else
+  //       insertRecursively(i+1)
+  //         .then(() => resolve())
+  //   });
+  // });
+
+  // insertRecursively(0)
+  //   .then(() => {
+  //     closeClient();
+  //     resolve(votes.length);
+  //   })
+  //   .catch(err => {
+  //     closeClient();
+  //     reject(err);
+  //   });
+
+  // for (let i = 0; i < 100 && ok; i++) {
+  //   createBulkInsertQuery(votes.slice(percent*i, Math.max(percent*(i+1), votes.length)))
+  //     .then(body => client.bulk(body, handleError))
+  //     .catch(handleError);
+  // }
+
+  // console.log(votes[0]);
+  // const body = createBulkInsertQuery(votes.slice(0, 3));
+  // console.log(body.body[1]);
+  // console.log(body.body[2]);
+  
+  // client.bulk(createBulkInsertQuery(votes.slice(0,50000)), (err, res) => {
+  //   if (err) reject(err.message);
+  //   else resolve(votes.length);
+  // });
 });
 
 

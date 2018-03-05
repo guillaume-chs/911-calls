@@ -13,26 +13,47 @@ const my_lazy_elastic = require('./elastic-api'); // Module to handle the elasti
 const votes = []; // votes accumulator
 const indexName = my_constants.INDEX_NAME; // index name constant
 const indexType = my_constants.INDEX_TYPE; // index type constant
+const dataFolder = '../' + my_constants.DATA_FOLDER + '/'; // data folder relative path
 const mappings = my_parser.mappings; // Mappings of vote index
-
-const catchAndTrace = err => { console.trace(err) }; // catch helper function
 
 const my_elastic = my_lazy_elastic(indexName, indexType, mappings); // This is where my_elastic module gets init
 
 
-// import workflow
+// Prepare the data
+const testFile = dataFolder + 'French_Presidential_Election_2017_First_Round.sample.csv'; // 10 first lines
+const originalFile = dataFolder + 'French_Presidential_Election_2017_First_Round.csv';
+
+const fragments = Array
+  .of(1,2,3,4,5)
+  .map(i => `${dataFolder}French_Presidential_Election_2017_First_Round.part${i}.csv`);
+
+console.log('The file is big, we need to chop it down');
+console.log(fragments);
+console.log('\n');
+
+
+// Import workflow
 my_elastic.createFreshIndex()
-  .catch(catchAndTrace)
-  .then(res => {
-    // fs.createReadStream('../French_Presidential_Election_2017_First_Round.csv')
-    fs.createReadStream('../French_Presidential_Election_2017_First_Round.small.csv')
-      .pipe(csv())
-      .on('data', data => votes.push(my_parser.parseVotes(data)) ) // parser used here
-      .on('end', () => {
-        my_elastic.insert(votes)
-          .then(res => console.log(`Inserted ${res.items.length} voting results`))
-          .catch(catchAndTrace);
-      });
-  });
+  .then(res => importFragmentRecursively(0))
+  .catch(console.trace);
 
+// Rcursively import all fragments
+const importFragmentRecursively = i => {
+  if (i >= fragments.length) return;
 
+  const acc = [];
+  const fragment = fragments[i];
+  
+  fs.createReadStream(fragment)
+    .pipe(csv())
+    .on('data', chunk => acc.push(my_parser.parseVotes(chunk)) ) // parser used here
+    .on('end', () => {
+      console.log('---\nInserting ' + fragment);
+      my_elastic.insert(acc)
+        .then(res => {
+          console.log(`${fragment} : inserted ${res} lines`);
+          importFragmentRecursively(i+1);
+        })
+        .catch(console.log);
+    });
+};
