@@ -27,13 +27,13 @@ const parseVotes = data => ({
         address: data['Address'],
         postcode: data['Postal code'],
         city: data['City'],
-        unique: data['Poll.St.-unique']
     },
-
+    
     polling_station: {
         id: data['Polling station'],
         name: data['Polling station name'],
         insee: data['INSEE code'],
+        unique: data['Poll.St.-unique'],
         coordinates: parseGeo(data['Coordinates']),
     },
 
@@ -74,9 +74,27 @@ const getMappings = () => ({
     'geography.coordinates': {
         type: 'geo_point'
     },
-    'polling_data.abstentions_ratio': {
-        type: 'float'
-    }
+
+    'polling_data.registered': { type: 'integer' },
+    'polling_data.abstentions': { type: 'integer' },
+    'polling_data.voters': { type: 'integer' },
+    'polling_data.others': { type: 'integer' },
+    'polling_data.nulls': { type: 'integer' },
+    'polling_data.expressed': { type: 'integer' },
+
+    'polling_data.abstentions_ratio': { type: 'float' },
+    'polling_data.voters_ratio': { type: 'float' },
+    'polling_data.others_ratio_reg': { type: 'float' },
+    'polling_data.others_ratio_vot': { type: 'float' },
+    'polling_data.nulls_ratio_reg': { type: 'float' },
+    'polling_data.nulls_ratio_vot': { type: 'float' },
+    'polling_data.expressed_ratio_reg': { type: 'float' },
+    'polling_data.expressed_ratio_vot': { type: 'float' },
+
+    'winner.signboard': { type: 'integer' },
+    'winner.votes': { type: 'integer' },
+    'winner.votes_ratio_reg': { type: 'float' },
+    'winner.votes_ratio_exp': { type: 'float' }
 });
 
 module.exports.parseVotes = parseVotes;
