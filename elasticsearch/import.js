@@ -4,8 +4,8 @@ const fs = require('fs');
 
 
 // my modules
-const my_parser = require('./votes-parser'); // Module to handle the parsing of vote results
-const my_constants = require('./constants'); // Module to keep the shared global constants
+const my_constants = require('../constants'); // Module to keep the shared global constants
+const my_parser = require('../votes-parser')(my_constants.CONTEXTS.ELASTIC); // Module to handle the parsing of vote results
 const my_lazy_elastic = require('./elastic-api'); // Module to handle the elastic workflow
 
 
@@ -19,7 +19,7 @@ const mappings = my_parser.mappings; // Mappings of vote index
 const my_elastic = my_lazy_elastic(indexName, indexType, mappings); // This is where my_elastic module gets init
 
 
-// Prepare the data
+// prepare the data
 const testFile = dataFolder + 'French_Presidential_Election_2017_First_Round.sample.csv'; // 10 first lines
 const originalFile = dataFolder + 'French_Presidential_Election_2017_First_Round.csv';
 
@@ -32,12 +32,12 @@ console.log(fragments);
 console.log('\n');
 
 
-// Import workflow
+// import workflow
 my_elastic.createFreshIndex()
   .then(res => importFragmentRecursively(0))
   .catch(console.trace);
 
-// Rcursively import all fragments
+// recursively import all fragments
 const importFragmentRecursively = i => {
   if (i >= fragments.length) return;
 
@@ -53,7 +53,6 @@ const importFragmentRecursively = i => {
         .then(res => {
           console.log(`${fragment} : inserted ${res} lines`);
           importFragmentRecursively(i+1);
-        })
-        .catch(console.log);
+        });
     });
 };

@@ -1,19 +1,26 @@
-const TITLE_DELIMITER = require('./constants').TITLE_DELIMITER;
+const CONTEXTS = require('./constants').CONTEXTS;
+let context = undefined;
 
-const parseTitle = rawTitle => {
-    const parsed = rawTitle.split(TITLE_DELIMITER);
-    return ({
-        category: parsed[0].trim(),
-        title: parsed[1].trim()
-    });
-}
 
 const parseGeo = str => {
-    if (!str) {
-        return { lat: undefined, long: undefined};
+    let lat  = undefined,
+        long = undefined;
+
+    if (!!str) {
+        const {[0]: _lat, [1]: _long} = str.split(','); // destructuring because it's funny
+        lat = _lat.trim();
+        long = _long.trim();
     }
-    let {[0]: lat, [1]:long} = str.split(',')
-    return { lat: lat.trim(), long: long.trim() };   
+    
+    // Output depending on context
+    switch (context) {
+        case CONTEXTS.ELASTIC: return ({ lat, long });
+
+        case CONTEXTS.MONGO: return ({
+            type: "Point",
+            coordinates: [ parseFloat(lat), parseFloat(long) ]
+        });
+    }
 }
 
 const parseVotes = data => ({
@@ -70,7 +77,7 @@ const parseVotes = data => ({
     }
 });
 
-const getMappings = () => ({
+const getElasticMappings = () => ({
     'geography.coordinates': {
         type: 'geo_point'
     },
@@ -97,5 +104,25 @@ const getMappings = () => ({
     'winner.votes_ratio_exp': { type: 'float' }
 });
 
-module.exports.parseVotes = parseVotes;
-module.exports.mappings = getMappings();
+const getMongoMappings = () => ([
+    { location : "2dsphere" },
+    { title: 'text' }
+]);
+
+module.exports = (_context) => {
+    if (_context === undefined || (_context !== CONTEXTS.ELASTIC && _context !== CONTEXTS.MONGO))
+        throw new Error('Use Case undefined');
+
+    context = _context;
+    switch (context) {
+        case CONTEXTS.ELASTIC: return ({
+            parseVotes,
+            mappings: getElasticMappings()
+        })
+
+        case CONTEXTS.MONGO: return ({
+            parseVotes,
+            mappings: getMongoMappings()
+        })
+    }
+};

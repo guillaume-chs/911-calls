@@ -97,7 +97,7 @@ const createBulkInsertQuery = votes => ({
 
 
 
-const createFreshIndex = () => new Promise((resolve, reject) => {
+const newIndex = () => new Promise((resolve, reject) => {
   if (!client) openClient(); // open client
   
   const closeAndResolve = res => { closeClient(); resolve(res); }; // resolve helper
@@ -155,7 +155,7 @@ module.exports = (_indexName, _indexType, _mappings) => {
   indexType = _indexType;
   mappings = _mappings;
   return ({
-    createFreshIndex,
+    newIndex,
     insert
   });
 };
