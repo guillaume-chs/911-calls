@@ -23,6 +23,11 @@ npm -v
 5.6.0
 ```
 
+Pour node, je recommande d'augmenter la heap size pour les scripts d'import
+```bash
+node --max-old-space-size=4096 import.js --mongo
+```
+
 ## Jeu de données
 
 Le jeu de données utilisé est la liste des résultats des votes au 1er tour des élections présidentielles en France, en 2017.

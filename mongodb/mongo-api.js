@@ -10,11 +10,9 @@ const newIndex = () => new Promise((resolve, reject) => {
     MongoClient.connect(dbURL, (err, db) => {
         if (err) reject(err);
         else {
+            db.dropCollection(collName);
             const client = db.collection(collName);
-            client.dropIndexes();
-            for (let mapping of mappings) {
-                client.createIndex(mapping);
-            }
+            mappings.forEach(index => client.createIndex(index));
             resolve();
         }
     });
@@ -32,8 +30,6 @@ const insert = votes => new Promise((resolve, reject) => {
         }
     });
 });
-
-
 
 module.exports = (_dbName, _collName, _mappings) => {
     dbName = _dbName;

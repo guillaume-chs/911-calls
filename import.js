@@ -1,3 +1,4 @@
+
 if (process.argv.length !== 3) {
     console.log('Usage : node import.js [--elastic | --mongo]');
     process.exit(2);
@@ -10,18 +11,29 @@ if (arg !== '--elastic' && arg !== '--mongo') {
 }
 
 
+////////////
 // npm modules
+////////////
 const csv = require('csv-parser');
 const fs = require('fs');
 
+
+////////////
 // initialization
+////////////
 const my_constants = require('./constants'); // Module to keep the shared global constants
 const indexName = my_constants.INDEX_NAME; // index name constant
 const indexType = my_constants.INDEX_TYPE; // index type constant
 const contexts = my_constants.CONTEXTS; // contexts constant
 const dataFolder = './' + my_constants.DATA_FOLDER + '/'; // data folder relative path
 
-// prepare the data
+
+////////////
+// original datafile is too big : 191Mb
+// we need to avoid 2 issues
+//   - JavaScript heap out of memory
+//   - ElasticSearch error "Request Entity is too large"
+////////////
 const originalFile = dataFolder + 'French_Presidential_Election_2017_First_Round.csv';
 const testFile = dataFolder + 'French_Presidential_Election_2017_First_Round.sample.csv'; // 10 first lines
 console.log('The file is big, let\'s split it : ');
@@ -49,31 +61,20 @@ const importWithContext = context => {
     const my_driver = require(driver_module)(indexName, indexType, my_parser.mappings);
 
     my_driver.newIndex()
-        .then(() => importRecursively(my_driver, my_parser, 0))
+        .then(() => {
+            fragments.forEach(chunk => {
+                const acc = [];
+                fs.createReadStream(chunk)
+                    .pipe(csv())
+                    .on('data', chunk => acc.push(my_parser.parseVotes(chunk)) ) // parser used here
+                    .on('end', () => {
+                        my_driver
+                            .insert(acc)
+                            .then(res => console.log(`---\nFragment "${chunk.substring(53,58)}", lines inserted : ${res}\n---`));
+                    });
+            })
+        })
         .catch(console.trace);
-};
-
-
-////////////
-// recursively import fragments
-////////////
-const importRecursively = (driver, parser, i) => {
-  if (i >= fragments.length) return;
-
-  const acc = [];
-  const fragment = fragments[i];
-  
-  fs.createReadStream(fragment)
-    .pipe(csv())
-    .on('data', chunk => acc.push(parser.parseVotes(chunk)) ) // parser used here
-    .on('end', () => {
-      console.log('---\nInserting ' + fragment);
-      driver.insert(acc)
-        .then(res => {
-          console.log(`${fragment} : inserted ${res} lines`);
-          importRecursively(driver, parser, i+1);
-        });
-    });
 };
 
 
