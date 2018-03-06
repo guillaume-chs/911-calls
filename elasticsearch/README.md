@@ -26,7 +26,7 @@ Finalement, il suffit d'exécuter :
 node import.js
 ```
 
-Si vous avez le problème : `JavaScript heap out of memory`, c'est normal : le fichier est beaucoup plus gros que celui de 911 calls par exemple, on ne peut pas utiliser la même mécanique.
+J'ai eu le problème : `JavaScript heap out of memory`, puis `Request Entity too large` côté ElasticSearch. C'est normal : le fichier est beaucoup plus gros que celui de 911 calls par exemple, on ne peut pas utiliser la même mécanique (191Mb).
 
 Les données sont importées, on peut alors le vérifier avec cette requête qui devrait donner `761805` :
 
