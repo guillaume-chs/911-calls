@@ -23,6 +23,9 @@ const parseGeo = str => {
     }
 }
 
+const parseNumber = str => (context===CONTEXTS.MONGO) ? parseInt(str) : str;
+const parseFloatNumber = str => (context===CONTEXTS.MONGO) ? parseFloat(str) : str;
+
 const parseVotes = data => ({
     geography: {
         department_code: data['Department code'],
@@ -45,24 +48,24 @@ const parseVotes = data => ({
     },
 
     polling_data: {
-        registered: data['Registered'],
-        abstentions: data['Abstentions'],
-        abstentions_ratio: data['% Abs/Reg'],
+        registered: parseNumber(data['Registered']),
+        abstentions: parseNumber(data['Abstentions']),
+        abstentions_ratio: parseFloatNumber(data['% Abs/Reg']),
         
-        voters: data['Voters'],
-        voters_ratio: data['% Vot/Reg'],
+        voters: parseNumber(data['Voters']),
+        voters_ratio: parseFloatNumber(data['% Vot/Reg']),
         
-        others: data['None of the above(NOTA)'],
-        others_ratio_reg: data['% NOTA/Reg'],
-        others_ratio_vot: data['% NOTA/Vot'],
+        others: parseNumber(data['None of the above(NOTA)']),
+        others_ratio_reg: parseFloatNumber(data['% NOTA/Reg']),
+        others_ratio_vot: parseFloatNumber(data['% NOTA/Vot']),
         
-        nulls: data['Nulls'],
-        nulls_ratio_reg: data['% Nulls/Reg'],
-        nulls_ratio_vot: data['% Nulls/Vot'],
+        nulls: parseNumber(data['Nulls']),
+        nulls_ratio_reg: parseFloatNumber(data['% Nulls/Reg']),
+        nulls_ratio_vot: parseFloatNumber(data['% Nulls/Vot']),
         
-        expressed: data['Expressed'],
-        expressed_ratio_reg: data['% Exp/Reg'],
-        expressed_ratio_vot: data['% Exp/Vot'],
+        expressed: parseNumber(data['Expressed']),
+        expressed_ratio_reg: parseFloatNumber(data['% Exp/Reg']),
+        expressed_ratio_vot: parseFloatNumber(data['% Exp/Vot']),
     },
     
     winner: {
@@ -71,9 +74,9 @@ const parseVotes = data => ({
         surname: data['Surname'],
         firstname: data['First name'],
         
-        votes: data['Voted'],
-        votes_ratio_reg: data['% Votes/Reg'],
-        votes_ratio_exp: data['% Votes/Exp'],
+        votes: parseNumber(data['Voted']),
+        votes_ratio_reg: parseFloatNumber(data['% Votes/Reg']),
+        votes_ratio_exp: parseFloatNumber(data['% Votes/Exp']),
     }
 });
 
