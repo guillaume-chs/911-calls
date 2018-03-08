@@ -205,17 +205,47 @@ POST /fr_election_2017/_search
 }
 ```
 
+Avec MongoDB, je n'ai pas cette difficulté : 
+
+```js
+db.voteresult.aggregate([
+  { $project: {
+    _id: { $concat: [ '$geography.department_code', '-', '$geography.constituency_code' ] },
+    abs_ratio: '$polling_data.abstentions_ratio'
+  }},
+  { $group: {
+    _id: '$_id',
+    avg_abst: { $avg: '$abs_ratio' }
+  }},
+  { $sort: { avg_abst: -1 }  },
+  { $limit: 3 }
+])
+```
+
+**Résultat**
+
+```json
+{ "_id" : "ZC-2", "avg_abst" : 71.51549019607843 }
+{ "_id" : "ZZ-8", "avg_abst" : 68.5475 }
+{ "_id" : "ZX-1", "avg_abst" : 67.66833333333332 }
+```
+
+**Analyse**
+
+`"ZC"`, `"ZZ"`, `"ZX"` sont des départements d'outre-mer, ce qui peut expliquer le faible résultat.
+C'est intéressant à mettre au regard du taux moyen d'asbtention enregistré : `22,23%`.
+
 -----
 
 ### Trouver le score maximum de chaque candidat
 
 Toutes circonscriptions confondues, nous cherchons le pourcentage de voix maximum en faveur de chaque candidat.
 
-Face à toujours ce même problème de **double aggrégation** `constituency_code` & `department_code`, je propose alors de chercher le score maximal de chaque candidat par département.
-
-Notons qu'il est obligatoire de préciser `"size": "11"` : la valeur par défaut est de 10, il y a 11 candidats.
-
 **Requête**
+
+Pour ElasticSeach, face à toujours ce même problème de **double aggrégation** `constituency_code` & `department_code`, je propose de chercher le score maximal de chaque candidat par département.
+
+Notons qu'il faut préciser `"size": "11"` : la valeur par défaut est de 10, il y a 11 candidats.
 
 ```json
 POST /fr_election_2017/_search
@@ -250,19 +280,59 @@ POST /fr_election_2017/_search
 }
 ```
 
+Avec MongoDB, je n'ai pas de difficulté :
+```js
+db.voteresult.aggregate([
+  { $group: {
+    _id: {
+      candidate: { $concat: [ '$winner.firstname', ' ', '$winner.surname' ] },
+      dept: '$geography.department_code',
+      const: '$geography.constituency_code'
+    },
+    score: { $avg: '$winner.votes_ratio_exp' }
+  }},
+  { $sort: { score: -1 }},
+  { $group: {
+    _id: '$_id.candidate',
+    best_score: { $first: '$score' }
+  }},
+  { $sort: { best_score: -1 }}
+])
+```
+
+**Résultat**
+
+```json
+{ "_id" : "François FILLON", "best_score" : 56.93019230769231 }
+{ "_id" : "Emmanuel MACRON", "best_score" : 45.12466666666667 }
+{ "_id" : "Jean-Luc MÉLENCHON", "best_score" : 43.24016949152543 }
+{ "_id" : "Marine LE PEN", "best_score" : 42.49796296296296 }
+{ "_id" : "Benoît HAMON", "best_score" : 27.040542168674698 }
+{ "_id" : "Jean LASSALLE", "best_score" : 18.51780392156863 }
+{ "_id" : "Nicolas DUPONT-AIGNAN", "best_score" : 18.176744186046513 }
+{ "_id" : "Philippe POUTOU", "best_score" : 5.70125 }
+{ "_id" : "Nathalie ARTHAUD", "best_score" : 2.3206024096385542 }
+{ "_id" : "François ASSELINEAU", "best_score" : 2.1480303030303034 }
+{ "_id" : "Jacques CHEMINADE", "best_score" : 0.6079166666666667 }
+```
+
 **Analyse**
 
-On retrouve les 5 candidats principaux : ils sont tous au-dessus de la barre des `25%` dans leur meilleur départment.
+**Pour Elastic :** On voit 5 candidats principaux : ils sont tous au-dessus de la barre des `25%` dans leur meilleur départment.
 À l'inverse, les 6 autres candidats ne dépassent pas les `10%` au mieux.
+
+**Pour Mongo :** C'est plus intéressant : on voit nettement 4 candidats se dégager, ceux au-dessus de la barre des `40%` dans leur meilleur départment.
+Ensuite, 3 candidats entre `18%` et `27%`, puis un net écart avec les 4 derniers, à `5%` ou moins.
 
 -----
 
 ### Trouver le score minimal de chaque candidat
 
-Sur le même principe que la requête juste avant : ici, il suffit de changer l'instruction `order` de `desc` pour `asc`.
+Sur le même principe que la requête juste avant : ici, il suffit d'inverser l'ordre du sorting.
 
 **Requête**
 
+Pour ElasticSearch, je change `order` de `desc` pour `asc`.
 ```json
 POST /fr_election_2017/_search
 { 
@@ -296,9 +366,45 @@ POST /fr_election_2017/_search
 }
 ```
 
+Pour MongoDB, il faut inverser `$sort: { score: -1 }` :
+```js
+db.voteresult.aggregate([
+  { $group: {
+    _id: {
+      candidate: { $concat: [ '$winner.firstname', ' ', '$winner.surname' ] },
+      dept: '$geography.department_code',
+      const: '$geography.constituency_code'
+    },
+    score: { $avg: '$winner.votes_ratio_exp' }
+  }},
+  { $sort: { score: 1 }},
+  { $group: {
+    _id: '$_id.candidate',
+    best_score: { $first: '$score' }
+  }},
+  { $sort: { best_score: 1 }}
+])
+```
+
+**Résultat**
+
+```json
+{ "_id" : "Jacques CHEMINADE", "best_score" : 0.0425 }
+{ "_id" : "Nathalie ARTHAUD", "best_score" : 0.08634615384615385 }
+{ "_id" : "Philippe POUTOU", "best_score" : 0.19403846153846155 }
+{ "_id" : "Jean LASSALLE", "best_score" : 0.3186538461538462 }
+{ "_id" : "François ASSELINEAU", "best_score" : 0.3884 }
+{ "_id" : "Nicolas DUPONT-AIGNAN", "best_score" : 1.1061538461538463 }
+{ "_id" : "Benoît HAMON", "best_score" : 2.5576923076923075 }
+{ "_id" : "Jean-Luc MÉLENCHON", "best_score" : 3.59 }
+{ "_id" : "Marine LE PEN", "best_score" : 3.8203703703703704 }
+{ "_id" : "François FILLON", "best_score" : 7.437159090909091 }
+{ "_id" : "Emmanuel MACRON", "best_score" : 10.833333333333334 }
+```
+
 **Analyse**
 
-C'est encore plus intéressant : 2 candidats font plus de `10%` dans leur pire département ! Et il ne s'agit pas des deux vainqueurs :
+C'est encore plus intéressant ; 2 candidats font de très bons mauvais scores, mais il ne s'agit pas des deux vainqueurs :
  - E.Macron ;
  - F.Fillon, qui n'est pas allé au deuxième tour.
 
@@ -343,6 +449,25 @@ POST fr_election_2017/_search
 }
 ```
 
+```js
+db.voteresult.aggregate([
+  { $group: {
+    _id: '$polling_station.unique',
+    votes: { $max: '$polling_data.voters' }
+  }},
+  { $group: {
+    _id: null,
+    total_votes: { $sum: '$votes' }
+  }}
+])
+```
+
+**Résultat**
+
+```json
+{ "_id" : null, "total_votes" : 25313045 }
+```
+
 **Analyse**
 
 `25 313 045` de Français sont allés voter.
@@ -373,6 +498,22 @@ POST fr_election_2017/_search
     }
   }
 }
+```
+
+```js
+db.voteresult.aggregate([
+  { $match: { 'winner.signboard': '8' } },
+  { $group: {
+    _id: { firstname:'$winner.firstname', lastname:'$winner.surname' },
+    nb_votes: { $sum: '$winner.votes' }
+  }}
+])
+```
+
+**Résultat**
+
+```json
+{ "_id" : { "firstname" : "Jean", "lastname" : "LASSALLE" }, "nb_votes" : 435432 }
 ```
 
 **Analyse**
@@ -442,7 +583,30 @@ POST /fr_election_2017/_search
 }
 ```
 
-**Analyse**
+Avec MongoDB :
+```js
+db.voteresult.aggregate([
+  { $group: {
+    _id: {
+      dept: '$geography.department_code',
+      const: '$geography.constituency_code',
+      station: '$polling_station.unique'
+    },
+    registered: { $first: '$polling_data.registered' }
+  }},
+  { $group: {
+    _id: {
+      dept: '$_id.dept',
+      const: '$_id.const'
+    },
+    registered: { $sum: '$registered' }
+  }},
+  { $sort: { registered: 1 }},
+  { $limit: 1 }
+])
+```
+
+**Analyse pour ElasticSearch**
 
 Au résultat (après un certain temps de calcul... une dizaine de secondes), on apprend que la circonscription avec le moins d'inscrits se trouve en `2B`, en Corse !
 Il suffit de relancer la requête précédante avec (pour fitrer) :
@@ -459,9 +623,11 @@ Il suffit de relancer la requête précédante avec (pour fitrer) :
 
 La circonscription avec le moins d'inscrits en France est la **2ème circonscription de Haute-Corse** avec 19 électeurs !
 
+**Analyse pour MongoDB**
+
+Le résultat résume tout :
+```json
+{ "_id" : { "dept" : "ZZ", "const" : "11" }, "registered" : 54 }
+```
+
 -----
-
-
-
-
-- toute autre stat que tu trouve intéressante de nous fourninr ! (par exemple : la circonscription où il y a le plus petit écart entre le premier et le dernier candidat)
